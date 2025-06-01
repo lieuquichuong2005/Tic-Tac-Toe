@@ -46,7 +46,7 @@ public class GameManager : MonoBehaviour
         saveButton.onClick.AddListener(OnSaveButtonClicked);
 
     }
-    
+
     void OnPlayWithAIButtonClicked()
     {
         homeButtonPanel.SetActive(false);
@@ -55,19 +55,19 @@ public class GameManager : MonoBehaviour
     }
     void OnBoardSizeSliderChanged(float value)
     {
-        if(value == 1)
+        if (value == 1)
         {
             boardSize = 10;
         }
-        else if(value == 2)
+        else if (value == 2)
         {
             boardSize = 14;
         }
-        else if(value == 3)
+        else if (value == 3)
         {
             boardSize = 16;
         }
-        else if(value == 4)
+        else if (value == 4)
         {
             boardSize = 20;
         }

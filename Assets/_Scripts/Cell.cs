@@ -4,7 +4,7 @@ using UnityEngine.UI;
 public class Cell : MonoBehaviour
 {
     public TicTacToe gameManager;
-    
+
     public int row, column;
 
     public GameObject cellImage;
@@ -19,7 +19,7 @@ public class Cell : MonoBehaviour
         if (gameManager.isGameActive)
         {
 
-                gameManager.HandlePlayerMove(this.row, this.column);
+            gameManager.HandlePlayerMove(this.row, this.column);
         }
     }
     public void SetCellState(Sprite spriteToUpdate)

@@ -43,14 +43,14 @@ public class TicTacToe : MonoBehaviour
         // xóa bàn cờ cũ nếu có
         foreach (Transform child in boardPanel.transform)
         {
-            Destroy(child.gameObject);    
+            Destroy(child.gameObject);
         }
         isGameActive = true;
         isPlayerTurn = false;
         board = null;
         cellList.Clear();
         winningPositions = new List<Vector2Int>();
-        winMessage.Clear(); 
+        winMessage.Clear();
         whoseTurn.gameObject.SetActive(true);
         whoseTurn.sprite = isPlayerTurn ? playerSprite : aiSprite;
 
@@ -86,7 +86,7 @@ public class TicTacToe : MonoBehaviour
         {
             Debug.Log("Invalid move");
             return;
-        } 
+        }
 
         board[row, column] = playerSymbol;
         AudioManager.instance.PlayClickSound();
@@ -121,7 +121,7 @@ public class TicTacToe : MonoBehaviour
         Vector2Int immediateMove = FindImediateMove();
 
         Vector2Int bestMove = Vector2Int.zero;
-        if(immediateMove != Vector2Int.zero)
+        if (immediateMove != Vector2Int.zero)
         {
             bestMove = immediateMove;
         }
@@ -423,7 +423,7 @@ public class TicTacToe : MonoBehaviour
                 int emptyBefore = 0;
                 int emptyAfter = 0;
 
-                for(int i = 1; i < lengthToWin; i++)
+                for (int i = 1; i < lengthToWin; i++)
                 {
                     int newRow = row + i * rowDirections[direction];
                     int newColumn = column + i * columnDirections[direction];
@@ -443,16 +443,16 @@ public class TicTacToe : MonoBehaviour
                         break;
                     }
                 }
-                if(count + emptyBefore + emptyAfter >= lengthToWin)
+                if (count + emptyBefore + emptyAfter >= lengthToWin)
                 {
-                    if(count == 4) strength += 1000;
-                    else if(count == 3) strength += 100;
-                    else if(count == 2) strength += 10;
-                    else if(count == 1) strength += 1;
+                    if (count == 4) strength += 1000;
+                    else if (count == 3) strength += 100;
+                    else if (count == 2) strength += 10;
+                    else if (count == 1) strength += 1;
 
                     strength += (emptyBefore + emptyAfter) * 2;
                 }
-                
+
             }
         }
         return strength;
@@ -475,7 +475,7 @@ public class TicTacToe : MonoBehaviour
         float distanceToCenter = Mathf.Sqrt(Mathf.Pow(row - centerRow, 2) + Mathf.Pow(column - centerColumn, 2));
 
         value += Mathf.Max(5 - (int)distanceToCenter, 0);
-        
+
         return value;
     }
     // Lấy danh sách các nước đi tiềm năng thông minh cho AI dựa trên các ô trống gần quân cờ đã có.
@@ -537,7 +537,7 @@ public class TicTacToe : MonoBehaviour
                         break;
                     }
                 }
-            }    
+            }
         }
         // Sắp xếp danh sách các nước đi theo giá trị đánh giá giảm dần
         availableMoves = availableMoves.OrderByDescending(move => EvaluateMove(b, move.x, move.y)).ToList();
@@ -555,7 +555,7 @@ public class TicTacToe : MonoBehaviour
         {
             return (Vector2Int.zero, -1000 - depth);
         }
-        if(depth == 0 || IsBoardFull(b))
+        if (depth == 0 || IsBoardFull(b))
         {
             return (Vector2Int.zero, EvaluateBoard(b));
         }
@@ -564,8 +564,9 @@ public class TicTacToe : MonoBehaviour
         List<Vector2Int> availableMoves = GetSmartCandidateMove(b);
         Vector2Int bestMove = availableMoves.Count > 0 ? availableMoves[0] : Vector2Int.zero;
         int bestValue = isMaximizing ? int.MinValue : int.MaxValue;
-        
-        foreach(Vector2Int move in availableMoves) {
+
+        foreach (Vector2Int move in availableMoves)
+        {
             if (IsInBounds(move.x, move.y))
             {
                 if (IsInBounds(move.x, move.y))
@@ -663,7 +664,7 @@ public class TicTacToe : MonoBehaviour
 
             if (count >= 2) // Nếu có 2 quân liền nhau
                 return 3; // Có thể tạo thành 3 quân
-            else if (count > 1) 
+            else if (count > 1)
                 return 2; // Nếu có 2 quân liền nhau thì có thể tạo thành 3 quân
         }
         return 1;
