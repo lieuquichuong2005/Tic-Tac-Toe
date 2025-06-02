@@ -37,6 +37,12 @@ public class TicTacToe : MonoBehaviour
     /// </summary>
     /// <param name="boardSizeToCreate"></param>
 
+    private void Start()
+    {
+        CreateBoard(PlayerPrefs.GetInt("BoardSize", 20));
+
+    }
+
     // Tạo bàn cờ
     public void CreateBoard(int boardSizeToCreate)
     {
@@ -107,7 +113,7 @@ public class TicTacToe : MonoBehaviour
         {
             isPlayerTurn = !isPlayerTurn;
             whoseTurn.sprite = aiSprite;
-            Invoke(nameof(HandleAIMove), 0.3f);
+            Invoke(nameof(HandleAIMove), 0.5f);
         }
     }
     // Xử lý lượt đi của AI.
@@ -209,6 +215,7 @@ public class TicTacToe : MonoBehaviour
         if (cell != null)
         {
             cell.SetCellState(sprite);
+            //cell.HandleCellClick(sprite);
         }
     }
     // Kiểm tra xem bàn cờ đã đầy chưa (không còn ô trống).
