@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+
+
 public class GameManager : MonoBehaviour
 {
     //public TicTacToe TicTacToe;
@@ -85,7 +87,7 @@ public class GameManager : MonoBehaviour
         //boardPanel.SetActive(true);
         PlayerPrefs.SetInt("BoardSize", boardSize);
         //TicTacToe.CreateBoard(boardSize);
-        SceneManager.LoadScene("Play");
+        SceneManager.LoadScene("OfflineGame");
     }
     /*IEnumerator Notify(string message)
     {

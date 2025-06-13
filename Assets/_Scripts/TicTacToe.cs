@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +10,9 @@ using UnityEngine.UI;
 
 public class TicTacToe : MonoBehaviour
 {
+    /// <summary>
+    /// Variables
+    /// </summary>
     public GameObject cellPrefab;
     public GameObject boardPanel;
     int boardSize;
@@ -28,19 +32,39 @@ public class TicTacToe : MonoBehaviour
     public bool isPlayerTurn = true;
 
     public GameObject resultPanel;
+    public TMP_Text resultText;
+
+    [Header("Visual Effects")]
+    public Color winningCellColor = Color.green;
+    public Color normalCellColor = Color.white;
+    public float highlightDuration = 0.3f;
+
+    public Button undoButton;
+    public Button redoButton;
+
+    // Stack lưu lịch sử để hỗ trợ Undo
+    private Stack<(int row, int col, string symbol)> moveHistory = new();
+    // Stack lưu lại các bước đã undo để hỗ trợ Redo
+    private Stack<(int row, int col, string symbol)> redoHistory = new();
+    // Lưu vị trí mới nhất vừa đánh (để tô màu)
+    private Cell lastPlayedCell = null;
 
     public Image whoseTurn;
 
-    StringBuilder winMessage = new StringBuilder();
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="boardSizeToCreate"></param>
+    private bool isCanUndo;
 
+    StringBuilder winMessage = new StringBuilder();
+
+
+    /// <summary>
+    /// Functions
+    /// </summary>
     private void Start()
     {
         CreateBoard(PlayerPrefs.GetInt("BoardSize", 20));
-
+        undoButton.onClick.AddListener(Undo);
+        redoButton.onClick.AddListener(Redo);
+        isCanUndo = true;
     }
 
     // Tạo bàn cờ
@@ -97,11 +121,14 @@ public class TicTacToe : MonoBehaviour
         board[row, column] = playerSymbol;
         AudioManager.instance.PlayClickSound();
         UpdateCellUI(row, column, playerSprite);
+        moveHistory.Push((row, column, playerSymbol));
+        redoHistory.Clear();  // xóa redo khi có bước mới
+
         if (CheckWin(playerSymbol))
         {
             resultPanel.SetActive(true);
-            //HighlightWinningCells();
-            resultPanel.GetComponentInChildren<TMP_Text>().text = winMessage.Append("You Win!!!").ToString();
+            HighlightWinningCells();
+            resultText.text = winMessage.Append("You Win!!!").ToString();
             AudioManager.instance.PlayWinSound();
             isGameActive = false;
         }
@@ -113,54 +140,8 @@ public class TicTacToe : MonoBehaviour
         {
             isPlayerTurn = !isPlayerTurn;
             whoseTurn.sprite = aiSprite;
-            Invoke(nameof(HandleAIMove), 0.5f);
+            Invoke(nameof(HandleAIMove), 2f);
         }
-    }
-    // Xử lý lượt đi của AI.
-    void HandleAIMove()
-    {
-        int stoneCount = CountChessOnBoard(board);
-        // tăng độ sâu tìm kiếm
-        int depth = stoneCount < 10 ? 4 : 3;
-
-        // Tìm nước đi ngay lập tức để thắng hoặc chặn đối phương thắng.
-        Vector2Int immediateMove = FindImediateMove();
-
-        Vector2Int bestMove = Vector2Int.zero;
-        if (immediateMove != Vector2Int.zero)
-        {
-            bestMove = immediateMove;
-        }
-        else
-        {
-            // tìm nước đi tốt nhất cho AI
-            var (move, _) = Minimax(board, depth, true, int.MinValue, int.MaxValue);
-            bestMove = move;
-        }
-
-        board[bestMove.x, bestMove.y] = aiSymbol;
-        AudioManager.instance.PlayClickSound();
-        UpdateCellUI(bestMove.x, bestMove.y, aiSprite);
-
-        // Kiểm tra xem AI có thắng không
-        if (CheckWin(aiSymbol))
-        {
-            resultPanel.SetActive(true);
-            //HighlightWinningCells();
-            resultPanel.GetComponentInChildren<TMP_Text>().text = winMessage.Append("AI Win!!!").ToString();
-            AudioManager.instance.PlayWinSound();
-            isGameActive = false;
-        }
-        else if (IsBoardFull(board))
-        {
-            DrawGame();
-        }
-        else
-        {
-            isPlayerTurn = !isPlayerTurn;
-            whoseTurn.sprite = playerSprite;
-        }
-
     }
     // Kiểm tra xem symbolToWin có thắng trên bàn cờ hay không.
     bool CheckWin(string symbolToWin, string[,] b = null)
@@ -215,7 +196,7 @@ public class TicTacToe : MonoBehaviour
         if (cell != null)
         {
             cell.SetCellState(sprite);
-            //cell.HandleCellClick(sprite);
+            StartCoroutine(HighlightLastMove(cell));
         }
     }
     // Kiểm tra xem bàn cờ đã đầy chưa (không còn ô trống).
@@ -250,6 +231,122 @@ public class TicTacToe : MonoBehaviour
             }
         }
         return count;
+    }
+    IEnumerator HighlightLastMove(Cell cell)
+    {
+        lastPlayedCell = cell;
+        var image = cell.transform.GetChild(0).GetComponent<Image>();
+        image.gameObject.SetActive(true);
+        Color originalColor = image.color;
+        image.color = Color.yellow;
+        yield return new WaitForSeconds(1f);  // Hiệu ứng trong 1 giây
+        if (/*lastPlayedCell == cell &&*/ !winningPositions.Contains(new Vector2Int(cell.row, cell.column)))
+            image.gameObject.SetActive(false);
+    }
+    public void Undo()
+    {
+        if(!isCanUndo) return;
+
+        for (int i = 0; i < 2; i++)
+        {
+            if (moveHistory.Count > 0 && isGameActive)
+            {
+                var (row, col, symbol) = moveHistory.Pop();
+                board[row, col] = null;
+                var cell = cellList.Find(c => c.row == row && c.column == col);
+                if (cell != null)
+                {
+                    cell.SetCellState(null);
+                    cell.GetComponent<Button>().interactable = true;
+                    cell.transform.GetChild(0).gameObject.SetActive(false);
+                    cell.transform.GetChild(1).gameObject.SetActive(false);
+                }
+                redoHistory.Push((row, col, symbol));
+                isPlayerTurn = symbol == playerSymbol;
+                whoseTurn.sprite = isPlayerTurn ? playerSprite : aiSprite;
+            }
+        }
+    }
+    public void Redo()
+    {
+        for(int i = 0; i < 2;i++)
+        {
+            if (redoHistory.Count > 0 && isGameActive)
+            {
+                var (row, col, symbol) = redoHistory.Pop();
+                board[row, col] = symbol;
+                var sprite = symbol == playerSymbol ? playerSprite : aiSprite;
+                UpdateCellUI(row, col, sprite);
+                moveHistory.Push((row, col, symbol));
+                isPlayerTurn = symbol != playerSymbol;
+                whoseTurn.sprite = isPlayerTurn ? playerSprite : aiSprite;
+            }
+        }
+    }
+    void HighlightWinningCells()
+    {
+        foreach (var pos in winningPositions)
+        {
+            var cell = cellList.Find(c => c.row == pos.x && c.column == pos.y);
+            if (cell != null)
+            {
+                cell.transform.GetChild(0).gameObject.SetActive(true);
+                cell.transform.GetChild(0).GetComponent<Image>().color = winningCellColor;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// AI Behaviour
+    /// </summary>
+    // Xử lý lượt đi của AI.
+    void HandleAIMove()
+    {
+        int stoneCount = CountChessOnBoard(board);
+        // tăng độ sâu tìm kiếm
+        int depth = stoneCount < 10 ? 4 : 3;
+
+        // Tìm nước đi ngay lập tức để thắng hoặc chặn đối phương thắng.
+        Vector2Int immediateMove = FindImediateMove();
+
+        Vector2Int bestMove = Vector2Int.zero;
+        if (immediateMove != Vector2Int.zero)
+        {
+            bestMove = immediateMove;
+        }
+        else
+        {
+            // tìm nước đi tốt nhất cho AI
+            var (move, _) = Minimax(board, depth, true, int.MinValue, int.MaxValue);
+            bestMove = move;
+        }
+
+        board[bestMove.x, bestMove.y] = aiSymbol;
+        AudioManager.instance.PlayClickSound();
+        UpdateCellUI(bestMove.x, bestMove.y, aiSprite);
+        moveHistory.Push((bestMove.x, bestMove.y, aiSymbol));
+        redoHistory.Clear();
+
+        // Kiểm tra xem AI có thắng không
+        if (CheckWin(aiSymbol))
+        {
+            resultPanel.SetActive(true);
+            HighlightWinningCells();
+            resultText.text = winMessage.Append("AI Win!!!").ToString();
+            AudioManager.instance.PlayWinSound();
+            isCanUndo = false;
+            isGameActive = false;
+        }
+        else if (IsBoardFull(board))
+        {
+            DrawGame();
+        }
+        else
+        {
+            isPlayerTurn = !isPlayerTurn;
+            whoseTurn.sprite = playerSprite;
+        }
+
     }
     // Tìm nước đi ngay lập tức để thắng hoặc chặn đối phương thắng.
     Vector2Int FindImediateMove()
@@ -638,17 +735,7 @@ public class TicTacToe : MonoBehaviour
         }
         return false;
     }
-    /*void HighlightWinningCells()
-    {
-        foreach (var position in winningPositions)
-        {
-            var cell = cellList.Find(c => c.row == position.x && c.column == position.y);
-            if (cell != null)
-            {
-                cell.GetComponent<Image>().color = Color.green;                                                
-            }
-        }
-    }*/
+
     // Hàm kiểm tra nếu có 3 quân liền nhau
     int IsThreeInARow(int row, int column, string symbol)
     {
